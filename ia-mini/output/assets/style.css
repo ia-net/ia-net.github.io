@@ -1,235 +1,178 @@
-﻿/* =========================================================
-   Design Tokens (색/여백/라운드/그림자/트랜지션)
-   ========================================================= */
-:root {
-  --w: 720px;
+﻿/* ==================== Tokens ==================== */
+:root{
+  --w:720px;
+
+  /* Fonts */
+  --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+               'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR',
+               'Pretendard', sans-serif;
+  --font-code: 'Consolas', Menlo, 'Ubuntu Mono', 'D2Coding', monospace;
 
   /* Palette */
-  --bg: #F4F6F8;
-  --text: #222;
-  --muted: #666;
-  --border: #D0D3D6;
+  --bg:#F4F6F8;
+  --text:#222;
+  --muted:#666;
+  --border:#D8DADD;
 
-  --brand: #512BD4;
-  --brand-2: #0078D4;
-
-  --radius: 12px;
-  --radius-pill: 999px;
-  --shadow: 0 1px 2px rgba(0,0,0,.04), 0 6px 24px rgba(0,0,0,.06);
-  --focus: 0 0 0 3px rgba(0,120,212,.25);
-  --ease: 0.2s ease;
+  /* Brand */
+  --brand:#512BD4;   /* .NET */
+  --brand-2:#0078D4; /* Azure (hover) */
 }
 
-/* 시스템 다크 모드 대응 */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1E1E1E;
-    --text: #EDEDED;
-    --muted: #B5B8BD;
-    --border: #32363B;
-    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 6px 24px rgba(0,0,0,.35);
-    --focus: 0 0 0 3px rgba(255,255,255,.25);
+/* 다크 모드 */
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1E1E1E; --text:#EDEDED; --muted:#B5B8BD; --border:#2E3236;
   }
 }
 
-/* =========================================================
-   Base
-   ========================================================= */
-* { box-sizing: border-box; }
-html { font-family: 'Gulim', system-ui, -apple-system, Segoe UI, Roboto, 'Consolas', sans-serif; }
-html, body { background-color: var(--bg); }
-body {
-  margin: 64px auto;
-  line-height: 1.75;
-  color: var(--text);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* ==================== Base ==================== */
+*{box-sizing:border-box}
+html{
+  font-family: var(--font-body);
+  background:var(--bg);
+}
+body{
+  margin:64px auto;
+  color:var(--text);
+  line-height:1.75;
+  background:var(--bg);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+::selection{background:rgba(81,43,212,.14)}
+
+/* 코드 블록 전역 폰트 */
+pre, code, kbd, samp { font-family: var(--font-code); }
+
+/* ==================== Layout ==================== */
+.container{max-width:var(--w);margin:0 auto;padding:0 16px}
+
+/* ==================== Links ==================== */
+a{
+  color:var(--brand);
+  text-decoration:underline;
+  text-underline-offset:2px;
+}
+a:hover{color:var(--brand-2)}
+a:focus-visible{outline:1.5px solid var(--brand-2); outline-offset:2px; border-radius:4px}
+.site-footer a{text-decoration:none;color:inherit}
+
+/* ==================== Header / Hero ==================== */
+.site-header{margin-bottom:2rem;color:var(--muted)}
+.site-title{
+  margin:0;
+  font-size:clamp(2rem,4vw,48px);
+  line-height:1.1;
+  text-align:center;
+}
+.site-title a{
+  text-decoration:none;
+  color:var(--brand);
+  font-weight:600;
+  letter-spacing:-0.2px;
+}
+.site-title a:hover{color:var(--brand-2)}
+.site-subtitle{
+  margin:.5rem 0 0;
+  font-size:.95rem;
+  color:var(--muted);
+  text-align:center;
+  font-style:italic;
+}
+.hero{text-align:center;margin-bottom:2.5rem}
+
+/* ==================== Post List ==================== */
+.post-list{list-style:none;margin:0 0 2.25rem;padding:0}
+.post-list li{
+  display:grid;
+  grid-template-columns:8ch 1fr;
+  gap:1rem;
+  align-items:baseline;
+  padding:.5rem 0;
+  border-bottom:1px solid var(--border);
+}
+.post-list li:last-child{border-bottom:0}
+.post-list time{white-space:nowrap;color:var(--muted)}
+
+/* ==================== Footer ==================== */
+.site-footer{margin-top:2rem;color:#555}
+.footer-links{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+  padding:.75rem 0;border-top:1px solid var(--border);
+}
+.copy{font-size:.95rem;color:var(--muted)}
+
+/* ==================== Content ==================== */
+hr{border:0;border-top:1px solid var(--border);margin:2rem 0}
+pre,code{background:transparent}
+.post__body pre{
+  overflow:auto;padding:1rem;border:1px solid var(--border);border-radius:6px;
 }
 
-/* 텍스트 선택시 색 */
-::selection { background: rgba(81,43,212,.18); }
+/* ==================== Utilities ==================== */
+.center{text-align:center}
+.muted{color:var(--muted)}
 
-/* =========================================================
-   Layout
-   ========================================================= */
-.container {
-  max-width: var(--w);
-  margin: 0 auto;
-  padding: 0 16px;
+/* ==================== Post Page ==================== */
+.post{max-width:var(--w);margin:0 auto;padding:2rem 1rem}
+.post__title{
+  margin:0 0 .25rem;
+  font-size:clamp(1.75rem,2.5vw,2.5rem);
+  letter-spacing:-.01em;
+}
+.post__meta{
+  margin:.25rem 0 1rem;
+  display:flex;align-items:center;gap:.5rem;
+  font-size:.95rem;color:var(--muted);
+}
+.post__desc{margin:.5rem 0 1rem;opacity:.92}
+.post__cover img{
+  width:100%;height:auto;border-radius:8px;margin:1rem 0;
+}
+.post__body{line-height:1.78;font-size:1.05rem}
+.post__body h2{margin-top:2rem;margin-bottom:.5rem}
+.post__tags{
+  list-style:none;display:flex;flex-wrap:wrap;gap:.5rem;padding:0;margin:2rem 0 0;
+}
+.post__tag{
+  font-size:.9rem;border-radius:999px;padding:.2rem .55rem;
+  border:1px solid var(--border);color:var(--muted);background:transparent;
 }
 
-/* =========================================================
-   Links
-   ========================================================= */
-a {
-  color: var(--brand);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  transition: color var(--ease), text-underline-offset var(--ease);
-}
-a:hover { color: var(--brand-2); text-underline-offset: 3px; }
-a:visited { opacity: .95; }
-a:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 6px; }
-
-.site-footer a { text-decoration: none; color: #555; }
-.site-footer a:hover { color: var(--text); }
-
-/* =========================================================
-   Header / Hero
-   ========================================================= */
-.site-header {
-  margin-bottom: 2rem;
-  color: var(--muted);
-}
-.site-title {
-  margin: 0;
-  font-size: clamp(2rem, 4vw, 48px);
-  line-height: 1.1;
-  text-align: center;
-}
-.site-title a {
-  text-decoration: none;
-  color: var(--brand);
-  font-weight: 650;
-  letter-spacing: -0.3px;
-  transition: color 0.25s ease;
-}
-.site-title a:hover { color: var(--brand-2); }
-.site-subtitle {
-  font-size: .95rem;
-  margin: .5rem 0 0;
-  color: var(--muted);
-  text-align: center;
-  font-style: italic;
-}
-.hero { text-align: center; margin-bottom: 2.75rem; }
-.tagline { margin: .25rem 0 0; }
-
-/* =========================================================
-   Post List
-   ========================================================= */
-.post-list {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 2.5rem;
-}
-.post-list li {
-  display: grid;
-  grid-template-columns: 8ch 1fr;
-  gap: 1.25rem;
-  align-items: baseline;
-  padding: .5rem 0;
-  border-bottom: 1px solid var(--border);
-}
-.post-list li:last-child { border-bottom: none; }
-.post-list time { white-space: nowrap; color: var(--muted); }
-
-/* =========================================================
-   Footer
-   ========================================================= */
-.site-footer {
-  margin-top: 2rem;
-  color: #555;
-}
-.footer-links {
+.post__nav {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  padding: .75rem 0;
-  border-top: 1px solid var(--border);
-}
-.copy { font-size: .95rem; color: var(--muted); }
-
-/* =========================================================
-   Content Elements
-   ========================================================= */
-hr {
-  border: 0;
-  border-top: 1px solid var(--border);
-  margin: 2rem 0;
-}
-
-/* 코드 포맷 오버로딩 */
-pre, code {
-  background: rgba(0,0,0,.03);
-}
-@media (prefers-color-scheme: dark) {
-  pre, code { background: rgba(255,255,255,.06); }
-}
-
-/* =========================================================
-   Utilities
-   ========================================================= */
-.center { text-align: center; }
-.muted { color: var(--muted); }
-
-/* =========================================================
-   Post Page
-   ========================================================= */
-.post {
-  max-width: var(--w);
-  margin: 0 auto;
-  padding: 2rem 1rem;
-  background: transparent; /* 필요시 카드형: #fff; box-shadow: var(--shadow); border-radius: var(--radius); */
-}
-.post__title {
-  margin: 0 0 .25rem;
-  font-size: clamp(1.75rem, 2.5vw, 2.5rem);
-  letter-spacing: -.01em;
-}
-.post__meta {
-  margin: .25rem 0 1rem;
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-  font-size: .95rem;
-  color: var(--muted);
-}
-.post__sep { opacity: .6; }
-.post__desc { margin: .5rem 0 1rem; opacity: .9; }
-.post__cover img {
-  width: 100%;
-  height: auto;
-  border-radius: var(--radius);
-  margin: 1rem 0;
-  box-shadow: var(--shadow);
-}
-.post__body {
-  line-height: 1.78;
-  font-size: 1.05rem;
-}
-.post__body h2 {
   margin-top: 2rem;
-  margin-bottom: .5rem;
-}
-.post__body pre {
-  overflow: auto;
-  padding: 1rem;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-}
-.post__tags {
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: .5rem;
-  padding: 0;
-  margin: 2rem 0 0;
-}
-.post__tag {
-  font-size: .9rem;
-  border-radius: var(--radius-pill);
-  padding: .25rem .6rem;
-  background: rgba(81,43,212,.08);
-  color: var(--brand);
-  border: 1px solid rgba(81,43,212,.15);
 }
 
-/* =========================================================
-   Responsive
-   ========================================================= */
-@media (max-width: 480px) {
-  .post-list li { grid-template-columns: 1fr; gap: .15rem; }
-  .footer-links { flex-direction: column; align-items: stretch; gap: .5rem; }
+.post__back {
+  color: var(--brand);
+  text-decoration: none;
+  font-size: 0.95rem;
+  transition: color var(--ease);
+}
+.post__back:hover {
+  color: var(--brand-2);
+}
+
+#backToTop {
+  background: var(--brand);
+  color: white;
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background var(--ease);
+}
+#backToTop:hover {
+  background: var(--brand-2);
+}
+
+/* ==================== Responsive ==================== */
+@media (max-width:480px){
+  .post-list li{grid-template-columns:1fr;gap:.15rem}
+  .footer-links{flex-direction:column;align-items:stretch;gap:.5rem}
 }

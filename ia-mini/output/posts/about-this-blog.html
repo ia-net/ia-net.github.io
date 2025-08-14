@@ -1,6 +1,7 @@
+
+
 <!doctype html>
 <html lang="ko">
-
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -129,6 +130,7 @@ ERP·MES 분야 대표님의 제안으로 첫 회사에 입사하게 됐습니�
 
 <nav class="post__nav">
     <a href="/" class="post__back">← Back to list</a>
+    <button id="backToTop" aria-label="맨 위로 가기">↑</button>
 </nav>
         </main>
 
@@ -137,11 +139,28 @@ ERP·MES 분야 대표님의 제안으로 첫 회사에 입사하게 됐습니�
                 <a href="https://github.com/ia-net" target="_blank" rel="noopener">Github</a>
                 <a href="/posts/about-this-blog">About this blog</a>
             </div>
+            <p class="copy">© 2025 Eunseok Lee</p>
         </footer>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
-    <script>hljs.highlightAll();</script>
-</body>
+    <script>
+        hljs.highlightAll();
+        document.addEventListener('DOMContentLoaded', function () {
+            const btn = document.getElementById('backToTop');
 
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 300) {
+                    btn.classList.add('show');
+                } else {
+                    btn.classList.remove('show');
+                }
+            });
+
+            btn.addEventListener('click', () => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        });
+    </script>
+</body>
 </html>

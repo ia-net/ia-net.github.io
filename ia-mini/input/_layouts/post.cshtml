@@ -14,7 +14,7 @@
     var cover = Document.ContainsKey(WebKeys.Image)
         ? Document.GetString(WebKeys.Image) : null;
 
-    // 대략적 읽기 시간(분) 계산: HTML 태그 제거 후 1분당 220단어 기준
+    // 읽기 시간(분) 계산: HTML 태그 제거 후 1분당 220단어 기준
     var html = await Document.GetContentStringAsync();
     var text = Regex.Replace(html ?? string.Empty, "<[^>]+>", " ");
     var words = Regex.Matches(text, @"[\p{L}\p{N}_]+").Count;
@@ -85,4 +85,5 @@
 
 <nav class="post__nav">
     <a href="/" class="post__back">← Back to list</a>
+    <button id="backToTop" aria-label="맨 위로 가기">↑</button>
 </nav>
