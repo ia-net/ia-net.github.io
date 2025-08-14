@@ -9,6 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="output\.nojekyll" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Statiq.Web" Version="1.0.0-beta.60" />
   </ItemGroup>
 
