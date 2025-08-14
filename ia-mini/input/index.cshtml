@@ -5,9 +5,11 @@
 
     // Content 파이프라인 결과에서 /posts/ 경로로 출력되는 페이지만 포스트로 간주
     IEnumerable<IDocument> posts = Outputs
-        .FromPipeline(nameof(Content))
-        .Where(d => d.GetLink()?.StartsWith("/posts/", StringComparison.OrdinalIgnoreCase) == true)
-        .OrderByDescending(p => p.GetDateTime(WebKeys.Published));
+    .FromPipeline(nameof(Content))
+    .Where(d =>
+        d.GetLink()?.StartsWith("/posts/", StringComparison.OrdinalIgnoreCase) == true
+        && !d.GetBool("NoList"))
+    .OrderByDescending(p => p.GetDateTime(WebKeys.Published));
 }
 
 <h3>Posts (@posts.Count())</h3>

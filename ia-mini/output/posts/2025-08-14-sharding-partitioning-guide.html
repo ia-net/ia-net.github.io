@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="ko">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>&#xB300;&#xADDC;&#xBAA8; &#xB370;&#xC774;&#xD130;&#xBCA0;&#xC774;&#xC2A4; &#xD655;&#xC7A5; &#xC804;&#xB7B5; &#x2014; &#xC0E4;&#xB529;&#xACFC; &#xD30C;&#xD2F0;&#xC154;&#xB2DD;</title>
+    <link rel="stylesheet" href="/assets/style.css" />
+    <link rel="stylesheet" href="/assets/site.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css">
+</head>
+
+<body>
+    <div class="container">
+            <header class="site-header">
+                <h1 class="site-title"><a href="/">ia-net</a></h1>
+                <p class="site-subtitle">Azure Cloud · .NET Core · MSSQL</p>
+            </header>
+
+        <main class="site-main">
+            
+
+<article class="post" itemscope itemtype="https://schema.org/Article">
+    <header class="post__head">
+        <h1 class="post__title" itemprop="headline">&#xB300;&#xADDC;&#xBAA8; &#xB370;&#xC774;&#xD130;&#xBCA0;&#xC774;&#xC2A4; &#xD655;&#xC7A5; &#xC804;&#xB7B5; &#x2014; &#xC0E4;&#xB529;&#xACFC; &#xD30C;&#xD2F0;&#xC154;&#xB2DD;</h1>
+
+        <p class="post__meta">
+            <time class="post__time" itemprop="datePublished"
+                datetime="2025-08-14">
+                2025.08.14
+            </time>
+
+
+            <span class="post__sep">·</span>
+            <span class="post__read">8&nbsp;min read</span>
+        </p>
+
+
+    </header>
+
+    <section class="post__body" itemprop="articleBody">
+        <h1 id="section">대규모 데이터베이스 확장 전략 — 샤딩과 파티셔닝</h1>
+<p>'언제 <strong>파티셔닝</strong>으로 충분하고, 언제 <strong>샤딩</strong>이 필요하며, Azure에서 어떻게 구현하고 운영해야 하는지'를 단계별로 정리합니다.</p>
+<hr />
+<h2 id="tldr">TL;DR</h2>
+<ul>
+<li>읽기 부하는 <strong>리드 레플리카/캐시</strong>, 쓰기·저장 한계는 <strong>샤딩</strong>으로 해결하는 게 정석.</li>
+<li><strong>샤드 키 선택</strong>이 절반 이상을 결정한다: <strong>균등 분포 + 자주 쓰는 쿼리 경로와 일치 + 불변성</strong>.</li>
+<li>운영은 <strong>가시성(관측)</strong> 과 <strong>리밸런싱 자동화</strong>가 성패를 가른다.</li>
+<li>처음부터 샤딩하지 말고 <strong>캐시 → 리드 레플리카 → 파티셔닝 → 샤딩</strong> 순서로 성숙도를 올려라.</li>
+<li>Azure SQL은 <strong>Hyperscale</strong>로 한계를 늦출 수 있고, <strong>Cosmos DB</strong>는 <strong>파티션 키</strong> 설계가 전부다.</li>
+</ul>
+<hr />
+<h2 id="section-1">왜 확장이 필요한가</h2>
+<ul>
+<li><strong>사용자/트래픽 증가</strong>로 단일 DB의 CPU, IOPS, 메모리가 포화.</li>
+<li><strong>데이터 폭증</strong>으로 인덱스 관리, 백업/복구, DDL(스키마 변경) 시간이 기하급수 증가.</li>
+<li><strong>SLA</strong>를 맞추려면 <strong>지연(latency)</strong> 상한과 <strong>가용성</strong> 목표를 꾸준히 지켜야 함.</li>
+</ul>
+<p>핵심은 <strong>처리량(throughput)</strong> 을 키우되 <strong>지연은 낮추고</strong>, 장애 시 <strong>빨리 복구</strong>하는 것.</p>
+<hr />
+<h2 id="vs">수직 vs 수평 확장</h2>
+<ul>
+<li><strong>수직 확장(Scale-Up)</strong>: 같은 DB를 더 큰 사양으로. 간단하지만 상한이 뚜렷하고 비용 증가가 가파름.</li>
+<li><strong>수평 확장(Scale-Out)</strong>: 데이터를 여러 노드(샤드)로 쪼개 분산. 운영은 복잡해지지만 <strong>선형에 가까운 확장성</strong>.</li>
+</ul>
+<blockquote>
+<p><strong>실무 팁</strong>: <strong>읽기</strong>는 캐시/리드 레플리카로, <strong>쓰기·저장</strong>은 샤딩으로 해결하는 것이 흔한 패턴.</p>
+</blockquote>
+<hr />
+<h2 id="vs-1">파티셔닝 vs 샤딩 (용어 정리)</h2>
+<ul>
+<li><strong>파티셔닝(Partitioning)</strong>: <strong>한 DB 인스턴스 내부</strong>에서 테이블을 파티션으로 나눔. (DB 기능)</li>
+<li><strong>샤딩(Sharding)</strong>: <strong>여러 DB 인스턴스</strong>에 데이터를 나눠 저장하는 <strong>수평 파티셔닝</strong>. (앱/미들웨어 라우팅 필요)</li>
+</ul>
+<p>둘은 대체 관계가 아니라 <strong>보완</strong> 관계. <strong>샤딩 후 각 샤드 내부에서 파티셔닝</strong>을 병행하기도 한다.</p>
+<h3 id="azure">Azure에서의 적용</h3>
+<ul>
+<li><p><strong>Azure SQL Database</strong></p>
+<ul>
+<li>파티셔닝: <strong>Partition Function/Scheme</strong>로 범위 분할, <strong>슬라이딩 윈도우</strong> 가능.</li>
+<li>수직 확장: vCore/DTU 변경, <strong>Hyperscale</strong>로 스토리지 대용량(수십~수백 TB급)과 빠른 확장.</li>
+<li>읽기 부하: <strong>Readable Secondary</strong>(Hyperscale), <strong>Elastic Pool</strong>로 비용 최적화.</li>
+</ul>
+</li>
+<li><p><strong>Azure Cosmos DB (Core/SQL)</strong></p>
+<ul>
+<li>샤딩 = 서비스 내장. <strong>파티션 키</strong>를 고르면 시스템이 자동 분산.</li>
+<li><strong>크로스 파티션 쿼리 비용</strong>과 <strong>핫 파티션</strong>에 유의. <strong>변경 불가</strong>에 가깝기 때문에 키 설계가 중요.</li>
+</ul>
+</li>
+<li><p><strong>Azure Database for PostgreSQL - Flexible Server / Cosmos DB for PostgreSQL(Citus)</strong></p>
+<ul>
+<li><strong>Citus</strong>는 분산(Postgres 샤딩) 기능 제공. 분산 컬럼(=샤드 키) 중심 설계.</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h2 id="section-2">샤딩 기본 설계</h2>
+<p><strong>비유</strong>: “한 창구에만 줄을 세우면 느려진다.” 고객(트래픽)을 <strong>여러 창구(샤드)</strong> 로 나눠 받으면 전체 처리량이 올라간다.<br />
+단, <strong>고객을 어떤 기준으로 어느 창구에 보낼지(샤드 키/라우팅)</strong> 가 중요.</p>
+<h3 id="section-3">샤드 키 선택 가이드 (현실적인 체크리스트)</h3>
+<p>좋은 샤드 키는 <strong>데이터 분산</strong>과 <strong>쿼리 패턴</strong>을 동시에 만족해야 한다.</p>
+<ol>
+<li><strong>높은 카디널리티</strong>: 다양한 값으로 골고루 분산. (핫샤드 방지)</li>
+<li><strong>균등 분포</strong>: 특정 샤드에 저장/트래픽이 몰리지 않음.</li>
+<li><strong>쿼리 경로와 일치</strong>: 가장 자주 쓰는 조회/조인 조건과 맞물려 <strong>싱글 샤드 쿼리</strong>가 되게.</li>
+<li><strong>불변성</strong>: 샤드 키가 바뀌면 재분배 비용 폭증.</li>
+<li><strong>시간 스큐 방지</strong>: 단조 증가 키(IDENTITY, 순증 타임스탬프)는 <strong>한 샤드로 쓰기 집중</strong> 유발.</li>
+</ol>
+<p><strong>자주 쓰는 선택지</strong></p>
+<ul>
+<li><strong>B2C</strong>: <code>UserId</code> (또는 <code>Hash(UserId)</code>)</li>
+<li><strong>멀티테넌시(B2B)</strong>: <code>TenantId</code> (대형 테넌트는 전용 샤드 고려)</li>
+<li><strong>로그/이벤트</strong>: <code>Hash(SourceId)</code> + <strong>시간 버킷</strong>(예: 월 단위)</li>
+</ul>
+<blockquote>
+<p><strong>실무 팁</strong>: <em>가상 샤드(virtual shard)</em> — 해시 버킷을 <strong>물리 샤드보다 더 많이</strong> 만든 뒤, 버킷→물리 샤드 매핑으로 관리하면 <strong>리밸런싱이 쉬워진다</strong>.</p>
+</blockquote>
+<h3 id="section-4">샤딩 방식 비교 (언제 무엇을 고르나)</h3>
+<ol>
+<li><p><strong>범위 샤딩(Range)</strong></p>
+<ul>
+<li>예: <code>UserId 0~1M → Shard A</code>, <code>1M~2M → Shard B</code></li>
+<li>장점: 범위 스캔·정렬·페이징 유리</li>
+<li>단점: 키 분포 치우치면 핫스팟 유발, 리밸런싱 때 범위 재조정 필요</li>
+<li><strong>적합</strong>: 시간순 정렬/리포트가 많고, 키 분포가 비교적 균일할 때</li>
+</ul>
+</li>
+<li><p><strong>해시 샤딩(Hash)</strong></p>
+<ul>
+<li>예: <code>shard = Hash(UserId) % N</code></li>
+<li>장점: <strong>균등 분산</strong> 강함</li>
+<li>단점: 범위 쿼리 불리, 샤드 수 변경 시 재해시 부담</li>
+<li><strong>적합</strong>: OLTP 트랜잭션 중심, 키 스큐 가능성이 높을 때</li>
+</ul>
+</li>
+<li><p><strong>디렉터리(룩업) 샤딩(Directory/Lookup)</strong></p>
+<ul>
+<li>중앙 <strong>샤드 맵 테이블</strong>에 <code>(Key → Shard)</code> 매핑 유지</li>
+<li>장점: <strong>유연한 재배치</strong>(특정 테넌트/레코드 이동)</li>
+<li>단점: 디렉터리 가용성·일관성 설계가 중요(SPOF 주의)</li>
+<li><strong>적합</strong>: 멀티테넌시, <strong>과열 테넌트 분리</strong> 자주 필요한 SaaS</li>
+</ul>
+</li>
+</ol>
+<blockquote>
+<p><strong>현실적 조합</strong>: <strong>해시 + 디렉터리</strong> — 기본은 해시 분산, <strong>예외 테넌트만</strong> 디렉터리로 별도 배치.</p>
+</blockquote>
+<hr />
+<h2 id="section-5">라우팅(샤드 맵) 패턴</h2>
+<ul>
+<li><strong>클라이언트 라우팅</strong>: 앱이 샤드 맵을 캐싱해 직접 라우팅(레이턴시↓). 캐시 무효화 전략 필수.</li>
+<li><strong>미들웨어/프록시 라우팅</strong>: 중간 계층이 라우팅(클라이언트 단순화). 중간층의 확장성/HA 필요.</li>
+<li><strong>DB 내장형 라우터</strong>: 일부 솔루션(Vitess/Citus 등)은 라우팅을 내장 제공.</li>
+</ul>
+<p>샤드 맵(메타)은 대개 아래 필드를 가진다.</p>
+<table>
+<thead>
+<tr>
+<th>컬럼</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ShardId</code></td>
+<td>샤드 고유 식별자</td>
+</tr>
+<tr>
+<td><code>KeyRange</code>/<code>HashRange</code></td>
+<td>담당 범위(또는 버킷)</td>
+</tr>
+<tr>
+<td><code>Endpoint</code></td>
+<td>연결 문자열/호스트</td>
+</tr>
+<tr>
+<td><code>State</code></td>
+<td>Online/Draining/Rebalancing</td>
+</tr>
+<tr>
+<td><code>Version</code></td>
+<td>맵 버전(원자적 교체/롤백용)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="section-6">리밸런싱(재분배) — 다운타임 최소화 절차</h2>
+<p>언제 하나? <strong>저장/트래픽 불균형</strong>, <strong>샤드 추가</strong>, <strong>과열 테넌트 격리</strong>가 필요할 때.</p>
+<ol>
+<li><strong>플래닝</strong>: 대상 범위/테넌트 선정, 목표 샤드 결정</li>
+<li><strong>Draining</strong>: 대상 샤드/키에 <strong>쓰기 제한</strong> 후 트래픽 서서히 빼기</li>
+<li><strong>증분 복제 + 컷오버</strong>: 스냅샷 → 변경분(CDC/Change Tracking) → 짧은 정지로 전환</li>
+<li><strong>검증</strong>: 카운트/체크섬/샘플링으로 데이터 동등성 확인</li>
+<li><strong>샤드 맵 원자 교체</strong>: <code>Version</code> 증가시키며 업데이트</li>
+<li><strong>롤백 플랜</strong>: 실패 시 역방향 컷오버</li>
+</ol>
+<blockquote>
+<p><strong>핵심</strong>: <strong>Dual-write</strong> 기간을 짧게, <strong>Idempotent upsert</strong>로 재시도 안전성 확보.</p>
+</blockquote>
+<h3 id="azure-1">Azure 관점 팁</h3>
+<ul>
+<li><strong>Azure SQL</strong>: <strong>DMS(Database Migration Service)</strong>, <strong>Change Tracking/CDC</strong>, <strong>별도 읽기 복제본</strong>을 활용한 저지연 컷오버 설계.</li>
+<li><strong>Cosmos DB</strong>: 파티션 키 변경은 사실상 <strong>새 컨테이너로 마이그레이션</strong>이므로 초기 설계 신중히.</li>
+</ul>
+<hr />
+<h2 id="section-7">트랜잭션·조인·크로스 샤드 쿼리 다루기</h2>
+<ul>
+<li><strong>싱글 샤드 트랜잭션</strong>을 목표로 쿼리 경로에 <strong>샤드 키 포함</strong>.</li>
+<li><strong>크로스 샤드 쿼리</strong>는 비용이 크다. 불가피하면:
+<ul>
+<li><strong>팬아웃 리드</strong>(모든 샤드 병렬 조회→집계) + 타임아웃/부분 결과 허용</li>
+<li><strong>사전 집계/머티리얼라이즈드 뷰</strong>로 빈도 낮추기</li>
+<li><strong>2PC</strong>는 정말 필요한, 작고 드문 트랜잭션에 한정</li>
+</ul>
+</li>
+</ul>
+<p><strong>조인 전략</strong></p>
+<ul>
+<li><strong>공샤딩(Co-sharding)</strong>: 자주 조인하는 테이블을 같은 키로 같은 샤드에</li>
+<li><strong>참조 데이터 복제</strong>: 작은 테이블은 모든 샤드에 복제</li>
+<li><strong>애플리케이션 레벨 조인</strong>: 키로 개별 조회 후 앱에서 머지</li>
+</ul>
+<hr />
+<h2 id="section-8">멀티테넌시 격리 전략</h2>
+<ul>
+<li><strong>공유 샤드(Soft)</strong>: 여러 테넌트를 한 샤드에. 자원 효율 ↑, 간섭 위험 존재.</li>
+<li><strong>전용 샤드(Hard)</strong>: 대형·과열 테넌트 전용. 예측 가능성 ↑, 운영비 ↑.</li>
+<li><strong>하이브리드</strong>: 기본은 공유, <strong>문제 테넌트만 분리</strong>.</li>
+</ul>
+<p><strong>지역/규제(Compliance)</strong> 요구가 있으면 <strong>샤드 경계 = 지역 경계</strong>로 설계.</p>
+<hr />
+<h2 id="section-9">장애·복구·일관성</h2>
+<ul>
+<li><strong>복제</strong>: 동기/비동기 조합으로 RPO/RTO와 쓰기 지연 균형.</li>
+<li><strong>장애 전파 차단</strong>: 회로 차단기 + 재시도 + 백오프.</li>
+<li><strong>일관성 모델</strong>: 강일관성↔최종일관성, <strong>도메인별 선택</strong>.</li>
+<li><strong>백업/복구</strong>: 샤드 단위 스냅샷 + 로그 기반 시점 복구. <strong>복구 리허설 자동화</strong> 권장.</li>
+</ul>
+<h3 id="asp.net-polly">ASP.NET에서의 회복 탄력성(예: Polly)</h3>
+<pre><code class="language-csharp">var retry = Policy
+    .Handle&lt;SqlException&gt;()
+    .WaitAndRetryAsync(3, i =&gt; TimeSpan.FromMilliseconds(100 * i));
+
+var breaker = Policy
+    .Handle&lt;SqlException&gt;()
+    .CircuitBreakerAsync(5, TimeSpan.FromSeconds(30));
+
+var resilient = Policy.WrapAsync(retry, breaker);
+
+await resilient.ExecuteAsync(() =&gt; ExecuteShardQueryAsync());
+</code></pre>
+<hr />
+<h2 id="section-10">마이그레이션 단계별 체크리스트 (현실 버전)</h2>
+<ol>
+<li><strong>워크로드 분석</strong>: 상위 20% 쿼리/트랜잭션, p95/p99, 키 분포, 핫 테이블 확인</li>
+<li><strong>샤드 키/전략 결정</strong>: (범위/해시/디렉터리) + 공샤딩 필요성 판단</li>
+<li><strong>스키마/인덱스 설계</strong>: 샤드 키를 <strong>선행 컬럼</strong>으로, 보조 인덱스/파티션 키 정리</li>
+<li><strong>라우터/샤드 맵 구현</strong>: 캐시(TTL/버전), 장애 폴백, 스키마·시드 자동화</li>
+<li><strong>데이터 이행 계획</strong>: 스냅샷→CDC→컷오버, <strong>리허설 2~3회</strong> 이상</li>
+<li><strong>관측성</strong>: 샤드별 QPS, p95/p99, 에러율, 리드/라이트 분포, 리밸런싱 진행률 대시보드</li>
+<li><strong>런북/롤백</strong>: 컷오버 실패·지연·데이터 불일치 대응 시나리오</li>
+</ol>
+<hr />
+<h2 id="section-11">운영 팁 &amp; 모니터링 지표 (대시보드 기준)</h2>
+<ul>
+<li><strong>핫샤드 탐지</strong>: 샤드별 QPS/IO/잠금 대기/큐 길이, 임계 초과 알람</li>
+<li><strong>키 스큐</strong>: 상위 N 키/테넌트의 트래픽 비중</li>
+<li><strong>리밸런싱 헬스</strong>: 이동량, 동기화 지연, 재시도율</li>
+<li><strong>에러 버짓</strong>: 크로스 샤드 쿼리 비율 상한</li>
+<li><strong>용량 계획</strong>: 주간 성장률 기반 <strong>90일 선제 증설</strong></li>
+</ul>
+<hr />
+<h2 id="azure-in-action">Azure in Action (구체 시나리오)</h2>
+<h3 id="azure-sql">1) Azure SQL로 시작해 한계를 늦추기</h3>
+<ul>
+<li><strong>단일 DB + 파티셔닝</strong>으로 운영 → 성능·용량 한계가 보이면</li>
+<li><strong>Hyperscale</strong>로 이전(스토리지·읽기 확장) → 그럼에도 <strong>쓰기가 포화</strong>되면</li>
+<li><strong>샤딩(다중 DB)</strong> 도입 + 각 샤드 내부 파티셔닝</li>
+<li>비용 최적화: <strong>Elastic Pool</strong>로 다수 샤드의 vCore/DTU를 풀링</li>
+</ul>
+<h3 id="cosmos-db">2) Cosmos DB에서의 파티션 키 설계</h3>
+<ul>
+<li><strong>높은 카디널리티</strong>의 키(예: <code>tenantId</code>, <code>userId</code>) 선택</li>
+<li><strong>핫 파티션</strong> 방지 위해 <strong>해시 성격</strong>의 키 고려, <strong>시간 키는 보조 인덱스</strong>로</li>
+<li>크로스 파티션 쿼리는 RU 소모↑ → <strong>쿼리 경로에 파티션 키 포함</strong> 습관화</li>
+<li>파티션 키는 <strong>사실상 변경 불가</strong>이므로 초기에 검증 철저</li>
+</ul>
+<h3 id="postgresqlcitus-oltp">3) PostgreSQL(Citus)로 분산 트랜잭션 OLTP</h3>
+<ul>
+<li><strong>분산 컬럼</strong>을 정하고 테이블을 분산 객체로 생성</li>
+<li>자주 조인하는 테이블은 <strong>공샤딩</strong> 또는 <strong>참조 테이블</strong> 복제</li>
+</ul>
+<hr />
+<h2 id="section-12">샘플 스키마 &amp; 코드 스니펫</h2>
+<h3 id="sql-server">(SQL Server) 파티션 함수/스킴 예시</h3>
+<pre><code class="language-sql">-- 월 단위 파티션 (예: 2024-01 ~ 2026-12)
+CREATE PARTITION FUNCTION pf_OrderByMonth (DATE)
+AS RANGE RIGHT FOR VALUES (
+  '2024-02-01', '2024-03-01', '2024-04-01', '2024-05-01',
+  '2024-06-01', '2024-07-01', '2024-08-01', '2024-09-01',
+  '2024-10-01', '2024-11-01', '2024-12-01',
+  '2025-01-01', '2025-02-01', '2025-03-01', '2025-04-01',
+  '2025-05-01', '2025-06-01', '2025-07-01', '2025-08-01',
+  '2025-09-01', '2025-10-01', '2025-11-01', '2025-12-01',
+  '2026-01-01', '2026-02-01', '2026-03-01', '2026-04-01',
+  '2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01',
+  '2026-09-01', '2026-10-01', '2026-11-01', '2026-12-01'
+);
+
+CREATE PARTITION SCHEME ps_OrderByMonth
+AS PARTITION pf_OrderByMonth
+ALL TO ([PRIMARY]);
+
+CREATE TABLE Orders (
+  OrderId      BIGINT NOT NULL PRIMARY KEY,
+  TenantId     BIGINT NOT NULL,
+  CreatedAt    DATE   NOT NULL,
+  Amount       DECIMAL(18,2) NOT NULL
+) ON ps_OrderByMonth(CreatedAt);
+
+CREATE INDEX IX_Orders_Tenant_Created
+  ON Orders(TenantId, CreatedAt)
+  ON ps_OrderByMonth(CreatedAt);
+</code></pre>
+<h3 id="section-13">샤드 맵 &amp; 테넌트 디렉터리</h3>
+<pre><code class="language-sql">CREATE TABLE ShardMap (
+  ShardId       INT PRIMARY KEY,
+  HashStart     INT NOT NULL,
+  HashEnd       INT NOT NULL,
+  Endpoint      VARCHAR(255) NOT NULL,   -- &quot;Server=...;Database=Shard_12;...&quot;
+  State         VARCHAR(16) NOT NULL,    -- Online | Draining | Rebalancing
+  Version       BIGINT NOT NULL
+);
+CREATE UNIQUE INDEX IX_Range ON ShardMap(HashStart, HashEnd);
+
+CREATE TABLE TenantDirectory (
+  TenantId  BIGINT PRIMARY KEY,
+  ShardId   INT NOT NULL,
+  UpdatedAt DATETIME2 DEFAULT SYSUTCDATETIME()
+);
+</code></pre>
+<h3 id="asp.net-ef-core">ASP.NET (EF Core) 라우팅 의사코드</h3>
+<pre><code class="language-csharp">public interface IShardResolver {
+    (int ShardId, string Endpoint) Resolve(long tenantId);
+}
+
+public class DirectoryFirstShardResolver : IShardResolver {
+    private readonly IShardDirectoryCache dir;
+    private readonly IShardMapCache map;
+    private readonly int shardCount;
+    public (int, string) Resolve(long tenantId) {
+        var shardId = dir.TryGetShard(tenantId) 
+            ?? (Hash(tenantId) % shardCount);
+        var endpoint = map.Resolve(shardId); // versioned
+        return (shardId, endpoint);
+    }
+}
+
+public class ShardedDbContextFactory {
+    private readonly IShardResolver resolver;
+    public AppDbContext Create(long tenantId) {
+        var (_, endpoint) = resolver.Resolve(tenantId);
+        var options = new DbContextOptionsBuilder&lt;AppDbContext&gt;()
+            .UseSqlServer(endpoint)
+            .Options;
+        return new AppDbContext(options);
+    }
+}
+</code></pre>
+<h3 id="section-14">팬아웃 리드(집계)</h3>
+<pre><code class="language-csharp">var tasks = shards.Select(s =&gt; CountOrdersAsync(s, since));
+var counts = await Task.WhenAll(tasks);
+var total = counts.Sum();
+</code></pre>
+<hr />
+<h2 id="section-15">비용·보안·운영 현실 체크</h2>
+<ul>
+<li><strong>비용</strong>: 샤드가 늘수록 <strong>모니터링/백업/자동화</strong>가 필수. Elastic Pool, 자동 스케일, 예약 인스턴스 등으로 최적화.</li>
+<li><strong>보안</strong>: <strong>Managed Identity + Key Vault</strong>로 샤드별 연결 문자열/비밀 분리.</li>
+<li><strong>데이터 거버넌스</strong>: 지역별 샤딩, <strong>Always Encrypted/연결 암호화</strong> 고려.</li>
+</ul>
+<hr />
+<h2 id="faq">자주 묻는 질문(FAQ)</h2>
+<ul>
+<li><p><strong>Q. 언제부터 샤딩을 시작해야 하나요?</strong></p>
+<ol type="A">
+<li>캐시·리드 레플리카·파티셔닝으로도 <strong>SLO를 못 맞출 때</strong>, 그리고 <strong>3~6개월 내 성장이 확실</strong>할 때.</li>
+</ol>
+</li>
+<li><p><strong>Q. 샤드 키를 잘못 골랐습니다.</strong></p>
+<ol type="A">
+<li>리밸런싱 자동화 파이프라인을 만들어 <strong>단계적 재분배</strong>. Cosmos DB는 <strong>새 컨테이너로 마이그레이션</strong>.</li>
+</ol>
+</li>
+<li><p><strong>Q. 크로스 샤드 트랜잭션이 자주 필요합니다.</strong></p>
+<ol type="A">
+<li><strong>도메인 재설계</strong>를 먼저 검토. 불가피하면 범위를 좁히고 <strong>Outbox/Idempotency</strong>로 보상 트랜잭션.</li>
+</ol>
+</li>
+</ul>
+<hr />
+<h2 id="section-16">요약 정리</h2>
+<ol>
+<li>먼저 <strong>캐시/레플리카/파티셔닝</strong>으로 버텨라.</li>
+<li><strong>샤드 키</strong>가 80%다 — 균등 분포, 쿼리 경로 일치, 불변성.</li>
+<li><strong>해시+디렉터리</strong> 조합이 현실적이며 <strong>가상 샤드</strong>로 리밸런싱을 쉽게.</li>
+<li><strong>관측성·자동화</strong> 없인 샤딩은 고통. 대시보드/런북 필수.</li>
+<li>Azure에선 <strong>SQL Hyperscale</strong>, <strong>Cosmos 파티션 키</strong>, <strong>Citus</strong> 등 옵션을 비교·선택.</li>
+</ol>
+
+    </section>
+
+        <footer class="post__foot">
+            <ul class="post__tags">
+                    <li class="post__tag">#Azure in action</li>
+            </ul>
+        </footer>
+</article>
+
+<nav class="post__nav">
+    <a href="/" class="post__back">← Back to list</a>
+</nav>
+        </main>
+
+        <footer class="site-footer">
+            <hr />
+            <div class="footer-links">
+                <a href="https://github.com/ia-net" target="_blank" rel="noopener">Github</a>
+                <a href="/posts/about-this-blog">About this blog</a>
+            </div>
+        </footer>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+
+</html>

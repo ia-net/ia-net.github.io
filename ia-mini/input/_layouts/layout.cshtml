@@ -1,6 +1,7 @@
 ﻿@inherits Statiq.Razor.StatiqRazorPage<IDocument>
 <!doctype html>
 <html lang="ko">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -9,6 +10,7 @@
     <link rel="stylesheet" href="/assets/site.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css">
 </head>
+
 <body>
     <div class="container">
         @* 홈에서는 hero 섹션이 들어오고, 그 외 페이지는 간단한 헤더 *@
@@ -30,11 +32,15 @@
 
         <footer class="site-footer">
             <hr />
-            <a href="https://github.com/ia-net" target="_blank" rel="noopener">Github</a>
+            <div class="footer-links">
+                <a href="https://github.com/ia-net" target="_blank" rel="noopener">Github</a>
+                <a href="/posts/about-this-blog">About this blog</a>
+            </div>
         </footer>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
     <script>hljs.highlightAll();</script>
 </body>
+
 </html>
