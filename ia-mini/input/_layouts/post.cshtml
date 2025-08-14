@@ -1,0 +1,88 @@
+﻿@using System.Text.RegularExpressions
+@inherits Statiq.Razor.StatiqRazorPage<IDocument>
+@{
+    Layout = "/_layouts/layout.cshtml";
+
+    var title = Document.GetString(Keys.Title);
+    var published = Document.GetDateTime(WebKeys.Published);
+    DateTime? updated = Document.ContainsKey(WebKeys.Updated)
+        ? Document.GetDateTime(WebKeys.Updated) : (DateTime?)null;
+
+    var description = Document.ContainsKey(WebKeys.Description)
+        ? Document.GetString(WebKeys.Description) : null;
+
+    var cover = Document.ContainsKey(WebKeys.Image)
+        ? Document.GetString(WebKeys.Image) : null;
+
+    // 대략적 읽기 시간(분) 계산: HTML 태그 제거 후 1분당 220단어 기준
+    var html = await Document.GetContentStringAsync();
+    var text = Regex.Replace(html ?? string.Empty, "<[^>]+>", " ");
+    var words = Regex.Matches(text, @"[\p{L}\p{N}_]+").Count;
+    var readM = Math.Max(1, (int)Math.Ceiling(words / 220.0));
+
+    // 태그 가져오기 (`Keys.Tags`가 없을 때는 문자열 키 사용)
+    IEnumerable<string> tags =
+        Document.GetList<string>("Tags")
+        ?? (Document.ContainsKey("Tags")
+            ? (Document.GetString("Tags")
+                ?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    ?? Array.Empty<string>()) : Array.Empty<string>());
+}
+
+
+<article class="post" itemscope itemtype="https://schema.org/Article">
+    <header class="post__head">
+        <h1 class="post__title" itemprop="headline">@title</h1>
+
+        <p class="post__meta">
+            <time class="post__time" itemprop="datePublished"
+                datetime="@published.ToString("yyyy-MM-dd")">
+                @published.ToString("yyyy.MM.dd")
+            </time>
+
+            @if (updated.HasValue && updated.Value.Date > published.Date)
+            {
+                <span class="post__sep">·</span>
+                <time class="post__time --updated" itemprop="dateModified"
+                    datetime="@updated.Value.ToString("yyyy-MM-dd")">
+                    업데이트 @updated.Value.ToString("yyyy.MM.dd")
+                </time>
+            }
+
+            <span class="post__sep">·</span>
+            <span class="post__read">@readM&nbsp;min read</span>
+        </p>
+
+        @if (!string.IsNullOrWhiteSpace(description))
+        {
+            <p class="post__desc" itemprop="description">@description</p>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(cover))
+        {
+            <figure class="post__cover" itemprop="image" itemscope itemtype="https://schema.org/ImageObject">
+                <img src="@Context.GetLink(cover)" alt="" loading="lazy" />
+            </figure>
+        }
+    </header>
+
+    <section class="post__body" itemprop="articleBody">
+        @RenderBody()
+    </section>
+
+    @if (tags?.Any() == true)
+    {
+        <footer class="post__foot">
+            <ul class="post__tags">
+                @foreach (var t in tags)
+                {
+                    <li class="post__tag">#@t</li>
+                }
+            </ul>
+        </footer>
+    }
+</article>
+
+<nav class="post__nav">
+    <a href="/" class="post__back">← Back to list</a>
+</nav>

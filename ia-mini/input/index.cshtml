@@ -1,0 +1,36 @@
+﻿@using System.Linq
+@inherits Statiq.Razor.StatiqRazorPage<IDocument>
+@{
+    Layout = "/_layouts/layout.cshtml";
+
+    // Content 파이프라인 결과에서 /posts/ 경로로 출력되는 페이지만 포스트로 간주
+    IEnumerable<IDocument> posts = Outputs
+        .FromPipeline(nameof(Content))
+        .Where(d => d.GetLink()?.StartsWith("/posts/", StringComparison.OrdinalIgnoreCase) == true)
+        .OrderByDescending(p => p.GetDateTime(WebKeys.Published));
+}
+
+<h3>Posts (@posts.Count())</h3>
+
+@if (!posts.Any())
+{
+    <p style="opacity:.7">
+        아직 표시할 포스트가 없어요.🙂<br />
+        → <code>input/posts/</code>에 포스트를 추가하고
+        <code>Published</code>를 오늘/과거로 지정하세요.
+    </p>
+}
+else
+{
+    foreach (var post in posts)
+    {
+        <article>
+            <time datetime="@post.GetDateTime(WebKeys.Published).ToString("yyyy-MM-dd")">
+                @post.GetDateTime(WebKeys.Published).ToString("yyyy-MM-dd")
+            </time>
+            <span style="padding-left: 5px;">
+                <a href="@post.GetLink()">@post.GetString(Keys.Title)</a>
+            </span>
+        </article>
+    }
+}

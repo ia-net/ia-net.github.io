@@ -1,0 +1,113 @@
+﻿:root {
+    --w: 720px;
+}
+
+* {
+    box-sizing: border-box
+}
+
+html {
+    font-family: 'Gulim', 'Consolas'
+}
+
+body {
+    margin: 64px auto;
+    line-height: 1.75
+}
+
+.container {
+    max-width: var(--w);
+    margin: 0 auto;
+    padding: 0 16px
+}
+
+a {
+    text-decoration: underline
+}
+
+a:visited {
+    opacity: .9
+}
+
+.site-header {
+    opacity: .7;
+    margin-bottom: 2rem
+}
+
+.site-title {
+    margin: 0;
+    font-size: 48px;
+    line-height: 1.1;
+    text-align: center
+}
+
+.site-title a {
+    text-decoration: none
+}
+
+.hero {
+    text-align: center;
+    margin-bottom: 2.75rem
+}
+
+.tagline {
+    margin: .25rem 0 0;
+}
+
+.post-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 2.5rem
+}
+
+.post-list li {
+    display: grid;
+    grid-template-columns: 8ch 1fr;
+    gap: 1.25rem;
+    align-items: baseline;
+    padding: .4rem 0;
+}
+
+.post-list time {
+    white-space: nowrap
+}
+
+.center {
+    text-align: center
+}
+
+.muted {
+    opacity: .7;
+}
+
+.site-footer {
+    opacity: .7;
+    margin-top: 2rem;
+    text-decoration: none;
+}
+
+.copy {
+    font-size: .95rem
+}
+
+.site-subtitle {
+    font-size: 1rem;
+    margin: 0.5rem 0 0;
+    opacity: 0.75;
+    text-align: center;
+    font-style: italic; /* 원하면 삭제 가능 */
+}
+
+
+hr {
+    border: 0;
+    border-top: 1px solid;
+    margin: 2rem 0
+}
+
+@media (max-width:480px) {
+    .post-list li {
+        grid-template-columns: 1fr;
+        gap: .15rem
+    }
+}
