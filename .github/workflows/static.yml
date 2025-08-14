@@ -25,16 +25,18 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      - name: Restore & Build (Statiq)
+      - name: Restore
+        run: dotnet restore ./ia-mini/ia-mini.csproj
+
+      - name: Build (Statiq)
         run: |
-          dotnet restore
-          dotnet run --configuration Release -- build
-          touch output/.nojekyll
+          dotnet run --configuration Release --project ./ia-mini/ia-mini.csproj -- build
+          touch ./ia-mini/output/.nojekyll
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./output
+          path: ./ia-mini/output
 
   deploy:
     needs: build
