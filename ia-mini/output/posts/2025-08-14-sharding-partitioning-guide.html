@@ -40,8 +40,7 @@
     </header>
 
     <section class="post__body" itemprop="articleBody">
-        <h1 id="section">대규모 데이터베이스 확장 전략 — 샤딩과 파티셔닝</h1>
-<p>'언제 <strong>파티셔닝</strong>으로 충분하고, 언제 <strong>샤딩</strong>이 필요하며, Azure에서 어떻게 구현하고 운영해야 하는지'를 단계별로 정리합니다.</p>
+        <p>'언제 <strong>파티셔닝</strong>으로 충분하고, 언제 <strong>샤딩</strong>이 필요하며, Azure에서 어떻게 구현하고 운영해야 하는지'를 단계별로 정리합니다.</p>
 <hr />
 <h2 id="tldr">TL;DR</h2>
 <ul>
@@ -52,7 +51,7 @@
 <li>Azure SQL은 <strong>Hyperscale</strong>로 한계를 늦출 수 있고, <strong>Cosmos DB</strong>는 <strong>파티션 키</strong> 설계가 전부다.</li>
 </ul>
 <hr />
-<h2 id="section-1">왜 확장이 필요한가</h2>
+<h2 id="section">왜 확장이 필요한가</h2>
 <ul>
 <li><strong>사용자/트래픽 증가</strong>로 단일 DB의 CPU, IOPS, 메모리가 포화.</li>
 <li><strong>데이터 폭증</strong>으로 인덱스 관리, 백업/복구, DDL(스키마 변경) 시간이 기하급수 증가.</li>
@@ -97,10 +96,10 @@
 </li>
 </ul>
 <hr />
-<h2 id="section-2">샤딩 기본 설계</h2>
+<h2 id="section-1">샤딩 기본 설계</h2>
 <p><strong>비유</strong>: “한 창구에만 줄을 세우면 느려진다.” 고객(트래픽)을 <strong>여러 창구(샤드)</strong> 로 나눠 받으면 전체 처리량이 올라간다.<br />
 단, <strong>고객을 어떤 기준으로 어느 창구에 보낼지(샤드 키/라우팅)</strong> 가 중요.</p>
-<h3 id="section-3">샤드 키 선택 가이드 (현실적인 체크리스트)</h3>
+<h3 id="section-2">샤드 키 선택 가이드 (현실적인 체크리스트)</h3>
 <p>좋은 샤드 키는 <strong>데이터 분산</strong>과 <strong>쿼리 패턴</strong>을 동시에 만족해야 한다.</p>
 <ol>
 <li><strong>높은 카디널리티</strong>: 다양한 값으로 골고루 분산. (핫샤드 방지)</li>
@@ -118,7 +117,7 @@
 <blockquote>
 <p><strong>실무 팁</strong>: <em>가상 샤드(virtual shard)</em> — 해시 버킷을 <strong>물리 샤드보다 더 많이</strong> 만든 뒤, 버킷→물리 샤드 매핑으로 관리하면 <strong>리밸런싱이 쉬워진다</strong>.</p>
 </blockquote>
-<h3 id="section-4">샤딩 방식 비교 (언제 무엇을 고르나)</h3>
+<h3 id="section-3">샤딩 방식 비교 (언제 무엇을 고르나)</h3>
 <ol>
 <li><p><strong>범위 샤딩(Range)</strong></p>
 <ul>
@@ -149,7 +148,7 @@
 <p><strong>현실적 조합</strong>: <strong>해시 + 디렉터리</strong> — 기본은 해시 분산, <strong>예외 테넌트만</strong> 디렉터리로 별도 배치.</p>
 </blockquote>
 <hr />
-<h2 id="section-5">라우팅(샤드 맵) 패턴</h2>
+<h2 id="section-4">라우팅(샤드 맵) 패턴</h2>
 <ul>
 <li><strong>클라이언트 라우팅</strong>: 앱이 샤드 맵을 캐싱해 직접 라우팅(레이턴시↓). 캐시 무효화 전략 필수.</li>
 <li><strong>미들웨어/프록시 라우팅</strong>: 중간 계층이 라우팅(클라이언트 단순화). 중간층의 확장성/HA 필요.</li>
@@ -187,7 +186,7 @@
 </tbody>
 </table>
 <hr />
-<h2 id="section-6">리밸런싱(재분배) — 다운타임 최소화 절차</h2>
+<h2 id="section-5">리밸런싱(재분배) — 다운타임 최소화 절차</h2>
 <p>언제 하나? <strong>저장/트래픽 불균형</strong>, <strong>샤드 추가</strong>, <strong>과열 테넌트 격리</strong>가 필요할 때.</p>
 <ol>
 <li><strong>플래닝</strong>: 대상 범위/테넌트 선정, 목표 샤드 결정</li>
@@ -206,7 +205,7 @@
 <li><strong>Cosmos DB</strong>: 파티션 키 변경은 사실상 <strong>새 컨테이너로 마이그레이션</strong>이므로 초기 설계 신중히.</li>
 </ul>
 <hr />
-<h2 id="section-7">트랜잭션·조인·크로스 샤드 쿼리 다루기</h2>
+<h2 id="section-6">트랜잭션·조인·크로스 샤드 쿼리 다루기</h2>
 <ul>
 <li><strong>싱글 샤드 트랜잭션</strong>을 목표로 쿼리 경로에 <strong>샤드 키 포함</strong>.</li>
 <li><strong>크로스 샤드 쿼리</strong>는 비용이 크다. 불가피하면:
@@ -224,7 +223,7 @@
 <li><strong>애플리케이션 레벨 조인</strong>: 키로 개별 조회 후 앱에서 머지</li>
 </ul>
 <hr />
-<h2 id="section-8">멀티테넌시 격리 전략</h2>
+<h2 id="section-7">멀티테넌시 격리 전략</h2>
 <ul>
 <li><strong>공유 샤드(Soft)</strong>: 여러 테넌트를 한 샤드에. 자원 효율 ↑, 간섭 위험 존재.</li>
 <li><strong>전용 샤드(Hard)</strong>: 대형·과열 테넌트 전용. 예측 가능성 ↑, 운영비 ↑.</li>
@@ -232,7 +231,7 @@
 </ul>
 <p><strong>지역/규제(Compliance)</strong> 요구가 있으면 <strong>샤드 경계 = 지역 경계</strong>로 설계.</p>
 <hr />
-<h2 id="section-9">장애·복구·일관성</h2>
+<h2 id="section-8">장애·복구·일관성</h2>
 <ul>
 <li><strong>복제</strong>: 동기/비동기 조합으로 RPO/RTO와 쓰기 지연 균형.</li>
 <li><strong>장애 전파 차단</strong>: 회로 차단기 + 재시도 + 백오프.</li>
@@ -253,7 +252,7 @@ var resilient = Policy.WrapAsync(retry, breaker);
 await resilient.ExecuteAsync(() =&gt; ExecuteShardQueryAsync());
 </code></pre>
 <hr />
-<h2 id="section-10">마이그레이션 단계별 체크리스트 (현실 버전)</h2>
+<h2 id="section-9">마이그레이션 단계별 체크리스트 (현실 버전)</h2>
 <ol>
 <li><strong>워크로드 분석</strong>: 상위 20% 쿼리/트랜잭션, p95/p99, 키 분포, 핫 테이블 확인</li>
 <li><strong>샤드 키/전략 결정</strong>: (범위/해시/디렉터리) + 공샤딩 필요성 판단</li>
@@ -264,7 +263,7 @@ await resilient.ExecuteAsync(() =&gt; ExecuteShardQueryAsync());
 <li><strong>런북/롤백</strong>: 컷오버 실패·지연·데이터 불일치 대응 시나리오</li>
 </ol>
 <hr />
-<h2 id="section-11">운영 팁 &amp; 모니터링 지표 (대시보드 기준)</h2>
+<h2 id="section-10">운영 팁 &amp; 모니터링 지표 (대시보드 기준)</h2>
 <ul>
 <li><strong>핫샤드 탐지</strong>: 샤드별 QPS/IO/잠금 대기/큐 길이, 임계 초과 알람</li>
 <li><strong>키 스큐</strong>: 상위 N 키/테넌트의 트래픽 비중</li>
@@ -294,7 +293,7 @@ await resilient.ExecuteAsync(() =&gt; ExecuteShardQueryAsync());
 <li>자주 조인하는 테이블은 <strong>공샤딩</strong> 또는 <strong>참조 테이블</strong> 복제</li>
 </ul>
 <hr />
-<h2 id="section-12">샘플 스키마 &amp; 코드 스니펫</h2>
+<h2 id="section-11">샘플 스키마 &amp; 코드 스니펫</h2>
 <h3 id="sql-server">(SQL Server) 파티션 함수/스킴 예시</h3>
 <pre><code class="language-sql">-- 월 단위 파티션 (예: 2024-01 ~ 2026-12)
 CREATE PARTITION FUNCTION pf_OrderByMonth (DATE)
@@ -325,7 +324,7 @@ CREATE INDEX IX_Orders_Tenant_Created
   ON Orders(TenantId, CreatedAt)
   ON ps_OrderByMonth(CreatedAt);
 </code></pre>
-<h3 id="section-13">샤드 맵 &amp; 테넌트 디렉터리</h3>
+<h3 id="section-12">샤드 맵 &amp; 테넌트 디렉터리</h3>
 <pre><code class="language-sql">CREATE TABLE ShardMap (
   ShardId       INT PRIMARY KEY,
   HashStart     INT NOT NULL,
@@ -370,13 +369,13 @@ public class ShardedDbContextFactory {
     }
 }
 </code></pre>
-<h3 id="section-14">팬아웃 리드(집계)</h3>
+<h3 id="section-13">팬아웃 리드(집계)</h3>
 <pre><code class="language-csharp">var tasks = shards.Select(s =&gt; CountOrdersAsync(s, since));
 var counts = await Task.WhenAll(tasks);
 var total = counts.Sum();
 </code></pre>
 <hr />
-<h2 id="section-15">비용·보안·운영 현실 체크</h2>
+<h2 id="section-14">비용·보안·운영 현실 체크</h2>
 <ul>
 <li><strong>비용</strong>: 샤드가 늘수록 <strong>모니터링/백업/자동화</strong>가 필수. Elastic Pool, 자동 스케일, 예약 인스턴스 등으로 최적화.</li>
 <li><strong>보안</strong>: <strong>Managed Identity + Key Vault</strong>로 샤드별 연결 문자열/비밀 분리.</li>
@@ -402,7 +401,7 @@ var total = counts.Sum();
 </li>
 </ul>
 <hr />
-<h2 id="section-16">요약 정리</h2>
+<h2 id="section-15">요약 정리</h2>
 <ol>
 <li>먼저 <strong>캐시/레플리카/파티셔닝</strong>으로 버텨라.</li>
 <li><strong>샤드 키</strong>가 80%다 — 균등 분포, 쿼리 경로 일치, 불변성.</li>
