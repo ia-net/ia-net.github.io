@@ -17,12 +17,22 @@
   /* Brand */
   --brand:#512BD4;   /* .NET */
   --brand-2:#0078D4; /* Azure (hover) */
+
+  /* === 코드 스타일 개선 === */
+  --code-bg:#FBFBFE;       /* 라이트 모드 코드 배경 */
+  --code-text:#1F2328;     /* 라이트 모드 코드 텍스트 */
+  --code-border:#E6E8EB;   /* 라이트 모드 코드 보더 */
 }
 
 /* 다크 모드 */
 @media (prefers-color-scheme: dark){
   :root{
     --bg:#1E1E1E; --text:#EDEDED; --muted:#B5B8BD; --border:#2E3236;
+
+    /* === 코드 스타일 개선 === */
+    --code-bg:#0F1115;     
+    --code-text:#EDEDED;   
+    --code-border:#2E3236; 
   }
 }
 
@@ -105,9 +115,46 @@ a:focus-visible{outline:1.5px solid var(--brand-2); outline-offset:2px; border-r
 
 /* ==================== Content ==================== */
 hr{border:0;border-top:1px solid var(--border);margin:2rem 0}
-pre,code{background:transparent}
+
+/* === 코드 스타일 개선: 블록 코드 === */
 .post__body pre{
-  overflow:auto;padding:1rem;border:1px solid var(--border);border-radius:6px;
+  background:var(--code-bg);
+  color:var(--code-text);
+  border:1px solid var(--code-border);
+  border-radius:8px;
+  padding:1rem;
+  overflow:auto;
+  box-shadow: inset 0 1px 0 rgba(0,0,0,.03);
+}
+
+/* highlight.js 배경 덮지 않게 */
+.post__body pre code.hljs{
+  background:transparent !important;
+  color:inherit !important;
+}
+
+/* === 코드 스타일 개선: 인라인 코드 === */
+.post__body :not(pre) > code{
+  background:var(--code-bg);
+  color:var(--code-text);
+  border:1px solid var(--code-border);
+  border-radius:4px;
+  padding:.12rem .35rem;
+  font-size:.95em;
+}
+
+/* 기존 transparent 규칙 제거 */
+pre, code { background:initial; }
+
+/* === 코드 스타일 개선: 스크롤바 === */
+.post__body pre::-webkit-scrollbar{height:8px}
+.post__body pre::-webkit-scrollbar-track{background:transparent}
+.post__body pre::-webkit-scrollbar-thumb{
+  background:rgba(0,0,0,.15);
+  border-radius:999px;
+}
+@media (prefers-color-scheme: dark){
+  .post__body pre::-webkit-scrollbar-thumb{background:rgba(255,255,255,.25)}
 }
 
 /* ==================== Utilities ==================== */
