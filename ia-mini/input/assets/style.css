@@ -65,6 +65,14 @@ a:visited {
 
 .site-title a {
     text-decoration: none;
+    color: #512BD4;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    transition: color 0.25s ease;
+}
+
+.site-title a:hover {
+    color: #0078D4;
 }
 
 .site-subtitle {
