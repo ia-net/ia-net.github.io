@@ -113,7 +113,7 @@ a:visited {
     margin-top: 2rem;
 }
 
-.site-footer .footer-links {
+.footer-links {
     display: flex;
     justify-content: space-between;
     align-items: center;
