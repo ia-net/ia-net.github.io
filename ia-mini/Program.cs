@@ -1,11 +1,14 @@
 ﻿using Statiq.App;
 using Statiq.Web;
 using Statiq.Markdown;
-using Markdig;
 
-await Bootstrapper
-  .Factory.CreateWeb(args)
-  .AddSetting(MarkdownKeys.MarkdownExtensions, MarkdownExtensions.UseAdvancedExtensions)
-  // 또는 특정 확장만:
-  //.AddSetting(MarkdownKeys.MarkdownExtensions, new[] { "PipeTables", "GridTables" })
+await Bootstrapper.Factory.CreateWeb(args)
+  // 확장 추가
+  .ModifyTemplate(
+      MediaTypes.Markdown,
+      x => ((RenderMarkdown)x).UseExtensions())
+  // 확장 개별 지정 필요 시
+  // .ModifyTemplate(
+  //     MediaTypes.Markdown,
+  //     x => ((RenderMarkdown)x).UseExtensions("pipetables+gridtables"))
   .RunAsync();
