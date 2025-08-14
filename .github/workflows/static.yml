@@ -30,7 +30,7 @@ jobs:
 
       - name: Build (Statiq)
         run: |
-          dotnet run --configuration Release --project ./ia-mini/ia-mini.csproj -- build
+          dotnet run --configuration Release --project ./ia-mini/ia-mini.csproj --
           touch ./ia-mini/output/.nojekyll
 
       - name: Upload artifact
