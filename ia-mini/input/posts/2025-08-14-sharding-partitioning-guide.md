@@ -1,8 +1,8 @@
 ---
-Title: EF Core와 Dapper, ASP.NET 개발자가 차분하게 고르는 데이터 접근 전략
+Title: EF Core와 Dapper 데이터 접근 전략
 Published: 2025-08-18
 Layout: /_layouts/post.cshtml
-Excerpt: ORM 추상화의 안정성과 경량 매퍼의 제어·성능 사이에서, EF Core와 Dapper를 실무 기준으로 차분히 해부한다. 추상화 비용, 성능 튜닝 포인트, 운영 리스크, 테스트/배포 파이프라인까지 한 번에 점검.
+Excerpt: ORM 추상화의 안정성과 경량 매퍼의 제어, 성능 분석
 Tags: [ASP.NET, Data Access, EF Core, Dapper, Architecture]
 ---
 
