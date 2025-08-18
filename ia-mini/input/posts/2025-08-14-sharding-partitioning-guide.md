@@ -22,7 +22,7 @@ EF Core는 전통적인 ORM입니다. 도메인 모델과 관계를 코드로 �
 
 Dapper는 경량 매퍼입니다. 개발자가 작성한 SQL이 그대로 실행되고, 결과만 빠르게 객체로 매핑됩니다. 번역 단계가 없으니 성능은 ADO.NET에 가깝고, SQL 힌트·CTE·윈도 함수 등 RDBMS의 기능을 고스란히 활용할 수 있습니다. 대량 조회나 리포팅, 대시보드처럼 읽기 중심 워크로드에서 체감 이득이 큽니다. 다만 스키마 변화에 따른 SQL 유지보수 책임이 개발자에게 남는 만큼, 팀 차원의 규칙과 도구가 필요합니다. 파라미터는 익명 객체/`DynamicParameters`로 일관되게 바인딩하고(보안·플랜 캐시에 유리), 여러 결과셋은 `QueryMultiple`로 왕복 횟수를 줄이며, 대량 입력은 SQL Server 기준 TVP를 통해 배치 처리하는 편이 좋습니다. 큰 결과는 `buffered:false`로 스트리밍하고, 페이징은 커버링 인덱스와 함께 `OFFSET/FETCH`를 사용해 실행 계획을 안정화합니다. 스칼라/값 객체 변환은 TypeHandler로 표준화하면 코드가 단정해집니다.
 
-**트랜잭션 처리 방식**은 EF Core, Dapper 모두 명확합니다. EF Core는 `DbContext.Database.BeginTransaction()`과 실행 전략을 통해 **원자성 + 내결함성**을 다루고, Dapper는 `IDbTransaction`으로 범위를 명시해 커밋/롤백을 관리합니다. 복잡한 비즈니스 연산이라면 EF Core에서 `Database.CreateExecutionStrategy()`로 재시도를 감싼 뒤 트랜잭션을 여는 패턴이 안전합니다. 
+**트랜잭션 처리 방식**은 EF Core, Dapper 모두 명확합니다. EF Core는 `DbContext.Database.BeginTransaction()`과 실행 전략을 통해 **원자성 + 내결함성**을 다루고, Dapper는 `IDbTransaction`으로 범위를 명시해 커밋/롤백을 관리합니다. 복잡한 비즈니스 연산이라면 EF Core에서 `Databa se.CreateExecutionStrategy()`로 재시도를 감싼 뒤 트랜잭션을 여는 패턴이 안전합니다. 
 
 어느 쪽이든 중요한 건 "업무 규칙이 코드에서 읽히는가" 입니다. 조인 전략 역시 관점의 차이인데, EF Core의 `Include`는 이해하기 쉽지만, 과도하면 중복 행이 늘어 부담이 커집니다. 성능이 중요한 경로에서는 `Select`로 DTO를 직접 투사해 필요한 조인만 표현하는 편이 안정적입니다. Dapper는 처음부터 끝까지 명시적으로 다루니, 읽기 모델을 뷰나 CTE로 미리 단순화해 쿼리를 짧게 유지하면 운영이 편안해집니다.
 
@@ -60,7 +60,7 @@ await strategy.ExecuteAsync(async () =>
 // Dapper - 페이징 + 총계 동시 조회
 using var conn = new SqlConnection(cs);
 var sql = @"
-;WITH Q AS (
+WITH Q AS (
   SELECT o.Id, o.Total, c.Name AS CustomerName
   FROM Orders o
   JOIN Customers c ON c.Id = o.CustomerId
@@ -88,8 +88,11 @@ var list = await conn.QueryAsync<Order, Customer, OrderDto>(
 
 ---
 
-마무리로, 선택의 기준을 짧게 정리해 봅니다.   
-변경 이력·협업·마이그레이션이 중요하다면 EF Core가 든든합니다. 
-읽기 성능·세밀한 제어가 우선이라면 Dapper가 깔끔한 해답을 줍니다. 
-두 도구를 함께 쓰면 복잡해질까 걱정되실 수 있지만, 실제로는 각자의 장점이 선명해지면서 코드가 더 단순해지고 예측 가능해지는 경우가 많습니다. 
-문제를 도구 탓으로 돌리기보다, 원칙을 정하고 일관되게 적용하는 쪽이 결국 마음이 편합니다.
+마무리로, 제 취향을 투명하게 적습니다. 아직 실무에서 두 도구를 모두 깊게 굴려본 것은 아니에요. 다만 샌드박스나 레퍼런스 리딩을 기준으로 하면, 기본값은 EF Core + Specification 패턴입니다. 쿼리 의도를 코드 가까이에 두고, 마이그레이션·테스트·배포 흐름까지 한 줄로 꿰기 좋거든요.
+
+Stored Procedure나 Dapper는 비상 레버처럼 남겨둡니다. 대시보드가 숨이 차거나, TVP로 대량 입력을 퍼부어야 하거나, 플랜 힌트까지 필요해지는 진짜 핫 패스가 보이면 그때만 씁니다. 그 경우에도 경계는 분명히 입출력 DTO, 파라미터 바인딩, 로깅 규칙을 정해 이탈 비용을 낮춥니다.
+
+요약하면, 보수적으로는 EF Core, 필요할 땐 Dapper/SP
+
+실무 경험이 더 쌓일 때까지는 이 원칙으로 움직이려 합니다.   
+(경험이 늘면, 결론도 기꺼이 업데이트하겠습니다.)
