@@ -1,4 +1,4 @@
-# ia-net Blog (Minimal C# Console Blog)
+# ia-net blog (minimal c# console blog)
 
 This repository is a minimal blog system built with a C# console application and a few NuGet packages.  
 It was created as a personal experiment to explore how simple a blog can be without using heavy frameworks or CMS platforms.  
